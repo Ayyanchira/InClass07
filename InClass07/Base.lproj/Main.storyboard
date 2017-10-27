@@ -167,10 +167,13 @@
                     <navigationItem key="navigationItem" title="Photo" id="vrv-Gt-X3L">
                         <barButtonItem key="rightBarButtonItem" systemItem="trash" id="yrS-Br-g2F">
                             <connections>
-                                <action selector="deleteButtonPressed:" destination="MM2-Af-khx" id="7dQ-pj-Xv5"/>
+                                <action selector="deleteButtonPressed:" destination="MM2-Af-khx" id="Rzb-Tf-gif"/>
                             </connections>
                         </barButtonItem>
                     </navigationItem>
+                    <connections>
+                        <outlet property="imageView" destination="pbZ-L6-uLm" id="GEZ-CT-RYy"/>
+                    </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="SXg-H1-Y23" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>

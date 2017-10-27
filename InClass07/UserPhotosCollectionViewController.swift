@@ -36,7 +36,10 @@ class UserPhotosCollectionViewController: UICollectionViewController,UIImagePick
         // Do any additional setup after loading the view.
     }
     
-    
+    override func viewWillAppear(_ animated: Bool) {
+        imageArray.removeAll()
+        fetchPhotos()
+    }
     @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
         
         
@@ -73,8 +76,7 @@ class UserPhotosCollectionViewController: UICollectionViewController,UIImagePick
     func uploadToFirebase(image:UIImage) -> Bool {
         var status = false
         let date = Date()
-        let dateInString = date.description
-        let storageRef = storage.reference(withPath: "Images/\(self.uuid)/\(dateInString)")
+        let storageRef = storage.reference(withPath: "Images/\(self.uuid)/\(date.timeIntervalSince1970).jpg")
         let imageData:Data = UIImageJPEGRepresentation(image,0.5)!
         let metadata = StorageMetadata()
         metadata.contentType = "image/jpeg"
@@ -88,7 +90,7 @@ class UserPhotosCollectionViewController: UICollectionViewController,UIImagePick
                 let downloadURL = metadata!.downloadURL()
                 print(downloadURL ?? "No downloadURL fetched")
                 status = true
-                self.uploadCompleteWith(metadata: metadata)
+                self.uploadCompleteWith(metadata: metadata ,date:date)
             }
         }
         
@@ -111,31 +113,47 @@ class UserPhotosCollectionViewController: UICollectionViewController,UIImagePick
         userRef.observeSingleEvent(of: DataEventType.value) { (snapshot) in
             if let values = snapshot.value as? NSDictionary{
                 self.imageArray.removeAll()
-                self.imageArray.append(values)
-                for object in self.imageArray{
-//                    let url = try? URL(string: object.object(forKey: "url") as! String)
-                    let key = object.allKeys[0] as! String
-                    print(object.object(forKey: key) ?? "Nothing found as URL")
-//                    let imageData =
+                for value in values{
+                    let object = value.value as? [String:Any]
+                    let url = object!["url"] as! String
+                    let ref = object!["ref"] as! String
+                    let date = object!["date"] as! String
+                    let dictionaryObject = [
+                        "url" : url,
+                        "ref" : ref,
+                        "date": date
+                    ]
+                    self.imageArray.append(dictionaryObject as NSDictionary)
                 }
-                self.collectionView?.reloadData()
+//                self.imageArray.removeAll()
+//                self.imageArray.append(values)
+//                for object in self.imageArray{
+////                    let url = try? URL(string: object.object(forKey: "url") as! String)
+//                    let key = object.allKeys[0] as! String
+//                    print(object.object(forKey: key) ?? "Nothing found as URL")
+////                    let imageData =
+//                }
+//                self.collectionView?.reloadData()
             }
+            self.collectionView?.reloadData()
         }
         print("Called\n\n\n")
     }
     
-    func uploadCompleteWith(metadata:StorageMetadata?){
+    func uploadCompleteWith(metadata:StorageMetadata?, date:Date){
         print("Upload complete")
         
-        let stringURL = metadata!.downloadURL()?.path
+        let stringURL = metadata!.downloadURL()?.absoluteString
         let imageRef = self.rootref.child("Users").child(self.uuid).child("Images").childByAutoId()
         let imageObject = [
             "ref" : imageRef.key,
-            "url" : stringURL
+            "url" : stringURL,
+            "date": String(date.timeIntervalSince1970)
         ]
         imageRef.setValue(imageObject)
         self.activityIndicator.stopAnimating()
         activityIndicator.isHidden = true
+        fetchPhotos()
     }
     
 
@@ -160,7 +178,7 @@ class UserPhotosCollectionViewController: UICollectionViewController,UIImagePick
     override func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         // #warning Incomplete implementation, return the number of items
         
-        return imageCollection.count
+        return imageArray.count
     }
 
     override func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
@@ -168,14 +186,32 @@ class UserPhotosCollectionViewController: UICollectionViewController,UIImagePick
     
         // Configure the cell
         cell.backgroundColor = #colorLiteral(red: 0.1764705926, green: 0.01176470611, blue: 0.5607843399, alpha: 1)
-        cell.image.image = imageCollection[indexPath.row]
+        let imageObject = imageArray[indexPath.row]
+        let imageURLString = imageObject.object(forKey: "url") as! String
+        let imageURL = URL.init(string: imageURLString)
+        
+        cell.image.downloadedFrom(url: imageURL!)
+        
         return cell
     }
 
     
     override func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        let selectedImage = imageCollection[indexPath.row]
-        performSegue(withIdentifier: "viewPhoto", sender: nil)
+       // let selectedImage = imageCollection[indexPath.row]
+        performSegue(withIdentifier: "viewPhoto", sender: indexPath.row)
+    }
+    
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        if segue.identifier == "viewPhoto" {
+            let photoViewController = segue.destination as! PhotoViewController
+            let index = sender as! Int
+            let imageObject = imageArray[index]
+            let imageURLString = imageObject.object(forKey: "url") as! String
+            let imageURL = URL.init(string: imageURLString)
+            photoViewController.imageURL = imageURL
+            photoViewController.date = imageObject.object(forKey: "date") as! String
+            photoViewController.imageKey = imageObject.object(forKey: "ref") as! String
+        }
     }
     // MARK: UICollectionViewDelegate
 
@@ -223,4 +259,42 @@ class UserPhotosCollectionViewController: UICollectionViewController,UIImagePick
 
 class CustomCollectionViewCell: UICollectionViewCell {
     @IBOutlet weak var image: UIImageView!
+}
+
+extension UIImageView {
+    
+    func downloadedFrom(url: URL, contentMode mode: UIViewContentMode = .scaleAspectFit) {
+        
+        contentMode = mode
+        
+        URLSession.shared.dataTask(with: url) { (data, response, error) in
+            
+            guard let httpURLResponse = response as? HTTPURLResponse, httpURLResponse.statusCode == 200,
+                
+                let mimeType = response?.mimeType, mimeType.hasPrefix("image"),
+                
+                let data = data, error == nil,
+                
+                let image = UIImage(data: data)
+                
+                else { return }
+            
+            DispatchQueue.main.async() { () -> Void in
+                
+                self.image = image
+                
+            }
+            
+            }.resume()
+        
+    }
+    
+    func downloadedFrom(link: String, contentMode mode: UIViewContentMode = .scaleAspectFit) {
+        
+        guard let url = URL(string: link) else { return }
+        
+        downloadedFrom(url: url, contentMode: mode)
+        
+    }
+    
 }
