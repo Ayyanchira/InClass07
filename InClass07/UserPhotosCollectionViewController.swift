@@ -14,19 +14,25 @@ private let reuseIdentifier = "Custom"
 
 class UserPhotosCollectionViewController: UICollectionViewController,UIImagePickerControllerDelegate,UINavigationControllerDelegate {
 
+    
     let picker = UIImagePickerController()
     var imageCollection = [UIImage]()
-    
+    var imageArray:[NSDictionary] = [NSDictionary]()
+    let uuid = UserDefaults.standard.object(forKey: "uuid") as! String
+    let rootref = Database.database().reference()
+    let storage = Storage.storage()
+    let activityIndicator = UIActivityIndicatorView()
     override func viewDidLoad() {
         super.viewDidLoad()
-
+        self.view.addSubview(activityIndicator)
+        activityIndicator.isHidden = true
         // Uncomment the following line to preserve selection between presentations
         // self.clearsSelectionOnViewWillAppear = false
 
         // Register cell classes
         
         picker.delegate = self
-
+        fetchPhotos()
         // Do any additional setup after loading the view.
     }
     
@@ -49,17 +55,88 @@ class UserPhotosCollectionViewController: UICollectionViewController,UIImagePick
         let chosenImage = info[UIImagePickerControllerOriginalImage] as! UIImage
         imageCollection.append(chosenImage)
         dismiss(animated: true, completion: nil)
+        uploadToFirebase(image: chosenImage)
         collectionView?.reloadData()
+//        }else{
+//            let alertController = UIAlertController(title: "Upload Failed", message: "Failed while uploading to cloud", preferredStyle: UIAlertControllerStyle.alert)
+//            let okAction = UIAlertAction(title: "OK", style: .default, handler: nil)
+//            alertController.addAction(okAction)
+//            self.present(alertController, animated: true, completion: nil)
+//        }
     }
     
     func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
         dismiss(animated: true, completion: nil)
     }
     
+    //PRAGMA MARK:- Firebase Photo upload and retrieval methods
+    func uploadToFirebase(image:UIImage) -> Bool {
+        var status = false
+        let date = Date()
+        let dateInString = date.description
+        let storageRef = storage.reference(withPath: "Images/\(self.uuid)/\(dateInString)")
+        let imageData:Data = UIImageJPEGRepresentation(image,0.5)!
+        let metadata = StorageMetadata()
+        metadata.contentType = "image/jpeg"
+        let uploadTask = storageRef.putData(imageData, metadata: metadata) { (metadata, error) in
+            if let error = error {
+                // Uh-oh, an error occurred!
+                print(error.localizedDescription)
+                status = false
+            } else {
+                // Metadata contains file metadata such as size, content-type, and download URL.
+                let downloadURL = metadata!.downloadURL()
+                print(downloadURL ?? "No downloadURL fetched")
+                status = true
+                self.uploadCompleteWith(metadata: metadata)
+            }
+        }
+        
+        activityIndicator.isHidden = false
+        activityIndicator.startAnimating()
+//        let observer = uploadTask.observe(.progress) { snapshot in
+//            // Upload reported progress
+//            let percentComplete = 100.0 * Double(snapshot.progress!.completedUnitCount)/Double(snapshot.progress!.totalUnitCount)
+//            if percentComplete == 100{
+//                self.uploadComplete(withMetadata: )
+//            }
+//
+//        }
+        return status
+    }
     
     
+    func fetchPhotos() {
+        let userRef = self.rootref.child("Users").child(self.uuid).child("Images")
+        userRef.observeSingleEvent(of: DataEventType.value) { (snapshot) in
+            if let values = snapshot.value as? NSDictionary{
+                self.imageArray.removeAll()
+                self.imageArray.append(values)
+                for object in self.imageArray{
+//                    let url = try? URL(string: object.object(forKey: "url") as! String)
+                    let key = object.allKeys[0] as! String
+                    print(object.object(forKey: key) ?? "Nothing found as URL")
+//                    let imageData =
+                }
+                self.collectionView?.reloadData()
+            }
+        }
+        print("Called\n\n\n")
+    }
     
-    
+    func uploadCompleteWith(metadata:StorageMetadata?){
+        print("Upload complete")
+        
+        let stringURL = metadata!.downloadURL()?.path
+        let imageRef = self.rootref.child("Users").child(self.uuid).child("Images").childByAutoId()
+        let imageObject = [
+            "ref" : imageRef.key,
+            "url" : stringURL
+        ]
+        imageRef.setValue(imageObject)
+        self.activityIndicator.stopAnimating()
+        activityIndicator.isHidden = true
+    }
     
 
     /*
