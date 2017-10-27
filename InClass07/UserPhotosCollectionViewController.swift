@@ -10,7 +10,7 @@ import UIKit
 import Firebase
 import Photos
 
-private let reuseIdentifier = "Cell"
+private let reuseIdentifier = "Custom"
 
 class UserPhotosCollectionViewController: UICollectionViewController,UIImagePickerControllerDelegate,UINavigationControllerDelegate {
 
@@ -26,7 +26,6 @@ class UserPhotosCollectionViewController: UICollectionViewController,UIImagePick
         // Register cell classes
         
         picker.delegate = self
-        self.collectionView!.register(UICollectionViewCell.self, forCellWithReuseIdentifier: reuseIdentifier)
 
         // Do any additional setup after loading the view.
     }
@@ -88,10 +87,11 @@ class UserPhotosCollectionViewController: UICollectionViewController,UIImagePick
     }
 
     override func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: reuseIdentifier, for: indexPath)
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: reuseIdentifier, for: indexPath) as! CustomCollectionViewCell
     
         // Configure the cell
         cell.backgroundColor = #colorLiteral(red: 0.1764705926, green: 0.01176470611, blue: 0.5607843399, alpha: 1)
+        cell.image.image = imageCollection[indexPath.row]
         return cell
     }
 
@@ -141,4 +141,9 @@ class UserPhotosCollectionViewController: UICollectionViewController,UIImagePick
         
         self.dismiss(animated: true, completion: nil)
     }
+}
+
+
+class CustomCollectionViewCell: UICollectionViewCell {
+    @IBOutlet weak var image: UIImageView!
 }
