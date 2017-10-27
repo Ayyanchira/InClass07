@@ -156,12 +156,19 @@
                         <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <imageView userInteractionEnabled="NO" contentMode="scaleAspectFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="pbZ-L6-uLm">
+                            <imageView userInteractionEnabled="NO" contentMode="scaleAspectFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="pbZ-L6-uLm">
                                 <rect key="frame" x="0.0" y="64" width="375" height="277"/>
-                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="277" id="rC7-CX-Jsp"/>
+                                </constraints>
                             </imageView>
                         </subviews>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+                        <constraints>
+                            <constraint firstItem="5cV-7f-Ofl" firstAttribute="trailing" secondItem="pbZ-L6-uLm" secondAttribute="trailing" id="ZHJ-0E-iid"/>
+                            <constraint firstItem="pbZ-L6-uLm" firstAttribute="leading" secondItem="5cV-7f-Ofl" secondAttribute="leading" id="rEQ-P0-bYB"/>
+                            <constraint firstItem="pbZ-L6-uLm" firstAttribute="top" secondItem="5cV-7f-Ofl" secondAttribute="top" id="toT-ZW-Mx3"/>
+                        </constraints>
                         <viewLayoutGuide key="safeArea" id="5cV-7f-Ofl"/>
                     </view>
                     <navigationItem key="navigationItem" title="Photo" id="vrv-Gt-X3L">
